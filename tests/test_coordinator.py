@@ -74,3 +74,71 @@ async def test_triggered_persists_until_disarmed(hass):
     coordinator.data = data
     data = await coordinator._async_update_data()
     assert data["HUB1"].triggered is False
+
+
+async def test_triggered_persists_in_night_mode(hass):
+    """Night mode is an armed state for Ajax; a poll returning DISARMED_NIGHT_MODE_ON must not clear `triggered`."""
+    coordinator = AjaxSecurFlowCoordinator(hass, _entry(hass), _client())
+    coordinator.data = await coordinator._async_update_data()
+    coordinator.data["HUB1"].triggered = True
+
+    coordinator.client.get_hub = AsyncMock(return_value={**HUB, "state": "DISARMED_NIGHT_MODE_ON"})
+    data = await coordinator._async_update_data()
+    assert data["HUB1"].triggered is True
+
+    coordinator.client.get_hub = AsyncMock(return_value={**HUB, "state": "DISARMED_NIGHT_MODE_OFF"})
+    coordinator.data = data
+    data = await coordinator._async_update_data()
+    assert data["HUB1"].triggered is False
+
+
+async def test_event_during_poll_is_replayed(hass):
+    """An ARM event noted while the poll is in flight wins over the (stale) DISARMED detail the poll returned."""
+    client = _client(get_hub=AsyncMock(return_value={**HUB, "state": "DISARMED"}))
+    coordinator = AjaxSecurFlowCoordinator(hass, _entry(hass), client)
+    arm = {"hub_id": "HUB1", "event_type": "SECURITY", "data": {"event": {"eventTag": "Arm", "sourceObjectType": "HUB", "sourceObjectId": "HUB1"}}}
+
+    async def devices_then_event(hub_id):
+        coordinator.note_event(arm)
+        return DEVICES
+
+    client.get_devices = AsyncMock(side_effect=devices_then_event)
+    data = await coordinator._async_update_data()
+    assert data["HUB1"].hub["state"] == "ARMED"
+    assert data["HUB1"].last_event["tag"] == "Arm"
+
+    # The replay buffer is consumed: a later poll with no events reflects the backend again.
+    coordinator.data = data
+    client.get_devices = AsyncMock(return_value=DEVICES)
+    data = await coordinator._async_update_data()
+    assert data["HUB1"].hub["state"] == "DISARMED"
+
+
+async def test_malformed_device_row_is_skipped(hass):
+    devices = [{"name": "sin id"}, {"id": None, "name": "id nulo"}, {"id": 7, "name": "numerico"}, *DEVICES]
+    coordinator = AjaxSecurFlowCoordinator(hass, _entry(hass), _client(get_devices=AsyncMock(return_value=devices)))
+    data = await coordinator._async_update_data()
+    assert set(data["HUB1"].devices) == {"7", "D1"}
+    assert data["HUB1"].devices["D1"]["name"] == "Puerta"
+
+
+async def test_hub_detail_without_id_uses_summary_id(hass):
+    coordinator = AjaxSecurFlowCoordinator(hass, _entry(hass), _client(get_hub=AsyncMock(return_value={"state": "ARMED"})))
+    data = await coordinator._async_update_data()
+    assert list(data) == ["HUB1"]
+    assert data["HUB1"].hub["id"] == "HUB1"
+    assert data["HUB1"].hub["state"] == "ARMED"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"get_hubs": AsyncMock(return_value=[{"name": "sin id"}])},   # KeyError
+        {"get_devices": AsyncMock(return_value=None)},                # TypeError
+        {"get_groups": AsyncMock(return_value=[None])},               # AttributeError/TypeError
+    ],
+)
+async def test_malformed_payload_raises_update_failed(hass, overrides):
+    coordinator = AjaxSecurFlowCoordinator(hass, _entry(hass), _client(**overrides))
+    with pytest.raises(UpdateFailed, match="Malformed"):
+        await coordinator._async_update_data()

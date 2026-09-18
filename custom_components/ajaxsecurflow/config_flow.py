@@ -51,10 +51,12 @@ class AjaxSecurFlowConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             else:
                 plan = _plan_of(me)
+                email = str(me.get("email") or "")
                 if plan not in PLANS_WITH_DEVICES:
                     errors["base"] = "plan_free"
+                elif not email:
+                    errors["base"] = "cannot_connect"
                 else:
-                    email = str(me["email"])
                     await self.async_set_unique_id(email.lower())
                     self._abort_if_unique_id_configured()
                     return self.async_create_entry(
@@ -73,13 +75,19 @@ class AjaxSecurFlowConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             token = user_input[CONF_TOKEN].strip()
             try:
-                await _fetch_me(self.hass, entry.data[CONF_BASE_URL], token)
+                me = await _fetch_me(self.hass, entry.data[CONF_BASE_URL], token)
             except AuthError:
                 errors["base"] = "invalid_auth"
             except AjaxSecurFlowError:
                 errors["base"] = "cannot_connect"
             else:
-                return self.async_update_reload_and_abort(entry, data_updates={CONF_TOKEN: token})
+                email = str(me.get("email") or "").lower()
+                if entry.unique_id and email != entry.unique_id:
+                    return self.async_abort(reason="wrong_account")
+                if _plan_of(me) not in PLANS_WITH_DEVICES:
+                    errors["base"] = "plan_free"
+                else:
+                    return self.async_update_reload_and_abort(entry, data_updates={CONF_TOKEN: token})
         return self.async_show_form(step_id="reauth_confirm", data_schema=STEP_REAUTH_SCHEMA, errors=errors)
 
     @staticmethod

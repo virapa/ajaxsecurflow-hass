@@ -3,15 +3,16 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import AjaxSecurFlowClient, AjaxSecurFlowError, AuthError
-from .const import CONF_BASE_URL, CONF_TOKEN
+from .const import CONF_BASE_URL, CONF_SCAN_INTERVAL, CONF_TOKEN, DEFAULT_SCAN_INTERVAL, PLANS_WITH_DEVICES
 from .coordinator import AjaxSecurFlowCoordinator
 from .models import HubData
 from .sse import SSEListener
@@ -54,6 +55,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry
         raise ConfigEntryNotReady(f"Cannot reach AjaxSecurFlow: {err}") from err
 
     plan = str(me.get("subscription_plan") or "free").lower()
+    if plan not in PLANS_WITH_DEVICES:
+        raise ConfigEntryError("The Free plan does not include device access; upgrade to Basic or higher")
     coordinator = AjaxSecurFlowCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
     rooms = await _load_room_names(client, coordinator.data)
@@ -68,7 +71,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry
 
 
 async def _async_options_updated(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry) -> None:
-    await hass.config_entries.async_reload(entry.entry_id)
+    interval = timedelta(seconds=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+    if interval != entry.runtime_data.coordinator.update_interval:
+        await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry) -> bool:

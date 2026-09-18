@@ -1,5 +1,7 @@
 import copy
-from custom_components.ajaxsecurflow.events import apply_event
+import pytest
+
+from custom_components.ajaxsecurflow.events import apply_event, hub_is_armed
 from custom_components.ajaxsecurflow.models import HubData
 
 
@@ -119,3 +121,36 @@ def test_idempotent_on_duplicate():
     snapshot = copy.deepcopy(data["HUB1"])
     apply_event(data, env)
     assert data["HUB1"] == snapshot
+
+
+@pytest.mark.parametrize(
+    ("state", "armed"),
+    [
+        ("ARMED", True),
+        ("DISARMED", False),
+        ("PARTIALLY_ARMED", True),
+        ("NIGHT_MODE", True),
+        ("ARMED_NIGHT_MODE_ON", True),
+        ("ARMED_NIGHT_MODE_OFF", True),
+        ("PARTIALLY_ARMED_NIGHT_MODE_ON", True),
+        ("PARTIALLY_ARMED_NIGHT_MODE_OFF", True),
+        ("DISARMED_NIGHT_MODE_ON", True),
+        ("DISARMED_NIGHT_MODE_OFF", False),
+        ("disarmed_night_mode_on", True),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_hub_is_armed_matrix(state, armed):
+    assert hub_is_armed(state) is armed
+
+
+def test_group_disarm_keeps_hub_triggered():
+    data = _data()
+    data["HUB1"].hub["state"] = "ARMED"
+    data["HUB1"].groups["G1"]["state"] = "ARMED"
+    data["HUB1"].triggered = True
+    apply_event(data, _env(tag="Disarm", source_id="G1", source_type="GROUP"))
+    assert data["HUB1"].groups["G1"]["state"] == "DISARMED"
+    assert data["HUB1"].hub["state"] == "ARMED"
+    assert data["HUB1"].triggered is True

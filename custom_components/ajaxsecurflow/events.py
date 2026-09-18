@@ -10,6 +10,23 @@ from .const import (
 from .models import HubData
 
 
+def hub_is_armed(state: str | None) -> bool:
+    """Whether an Ajax hub state string counts as armed (night mode included).
+
+    ARMED*, PARTIALLY_ARMED*, NIGHT_MODE and *_NIGHT_MODE_ON are armed; DISARMED and
+    DISARMED_NIGHT_MODE_OFF are not.
+    """
+    if not state:
+        return False
+    upper = state.upper()
+    return (
+        upper.startswith("ARMED")
+        or upper.startswith("PARTIALLY_ARMED")
+        or upper == "NIGHT_MODE"
+        or upper.endswith("NIGHT_MODE_ON")
+    )
+
+
 def _arming_state(tag: str, event_type: str) -> str | None:
     if tag in ARM_TAGS or event_type in ("ARM", "ARMED"):
         return "ARMED"
@@ -73,10 +90,13 @@ def apply_event(data: dict[str, HubData], envelope: dict[str, Any]) -> bool:
 
     new_state = _arming_state(tag, event_type)
     if new_state is not None:
-        if source_type == "GROUP" and source_id in hub_data.groups:
-            hub_data.groups[source_id]["state"] = new_state
-        else:
-            hub_data.hub["state"] = new_state
+        if source_type == "GROUP":
+            # A group change never touches the hub: the hub may still be armed (and triggered).
+            group = hub_data.groups.get(source_id)
+            if group is not None:
+                group["state"] = new_state
+            return True
+        hub_data.hub["state"] = new_state
         if new_state == "DISARMED":
             hub_data.triggered = False
         return True

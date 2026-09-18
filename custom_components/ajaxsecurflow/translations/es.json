@@ -24,7 +24,8 @@
     },
     "abort": {
       "already_configured": "Esta cuenta ya está configurada.",
-      "reauth_successful": "Token actualizado."
+      "reauth_successful": "Token actualizado.",
+      "wrong_account": "El token pertenece a otra cuenta de AjaxSecurFlow."
     },
     "create_entry": {
       "default": "Conectado.",

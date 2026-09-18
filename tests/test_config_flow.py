@@ -1,6 +1,8 @@
 # tests/test_config_flow.py
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
@@ -106,3 +108,49 @@ async def test_options_flow_sets_scan_interval(hass):
     result = await hass.config_entries.options.async_configure(result["flow_id"], {CONF_SCAN_INTERVAL: 120})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_SCAN_INTERVAL] == 120
+
+
+async def test_user_flow_without_email_cannot_connect(hass):
+    result = await _start(hass)
+    with _patch_me({"return_value": {"id": 1, "subscription_plan": "pro"}}):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_connect"}
+
+
+def _reauth_entry(hass):
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_BASE_URL: "https://api.test", CONF_TOKEN: "asf_old"}, unique_id="user@example.com")
+    entry.add_to_hass(hass)
+    return entry
+
+
+async def test_reauth_rejects_other_account(hass):
+    entry = _reauth_entry(hass)
+    result = await entry.start_reauth_flow(hass)
+    with _patch_me({"return_value": {**ME_PRO, "email": "other@example.com"}}):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_TOKEN: "asf_new"})
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_account"
+    assert entry.data[CONF_TOKEN] == "asf_old"
+
+
+async def test_reauth_rejects_free_plan(hass):
+    entry = _reauth_entry(hass)
+    result = await entry.start_reauth_flow(hass)
+    with _patch_me({"return_value": {**ME_PRO, "subscription_plan": "free"}}):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_TOKEN: "asf_new"})
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "plan_free"}
+    assert entry.data[CONF_TOKEN] == "asf_old"
+
+
+@pytest.mark.parametrize("interval", [10, 601])
+async def test_options_flow_rejects_out_of_range(hass, interval):
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_BASE_URL: "https://api.test", CONF_TOKEN: "asf_x"}, unique_id="u")
+    entry.add_to_hass(hass)
+    with patch("custom_components.ajaxsecurflow.async_setup_entry", return_value=True):
+        await hass.config_entries.async_setup(entry.entry_id)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with pytest.raises(vol.Invalid):
+        await hass.config_entries.options.async_configure(result["flow_id"], {CONF_SCAN_INTERVAL: interval})
+    assert CONF_SCAN_INTERVAL not in entry.options

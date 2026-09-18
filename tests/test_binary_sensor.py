@@ -1,9 +1,10 @@
 # tests/test_binary_sensor.py
 from homeassistant.components.binary_sensor import DOMAIN as BS_DOMAIN
-from homeassistant.const import STATE_OFF, STATE_ON
+from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.ajaxsecurflow.const import DOMAIN
+from tests.conftest import DEVICE_MOTION
 
 
 def _state(hass, unique_id):
@@ -48,3 +49,14 @@ async def test_state_follows_coordinator_update(hass, init_integration):
     coordinator.async_set_updated_data(coordinator.data)
     await hass.async_block_till_done()
     assert _state(hass, "HUB1_D1_opening").state == STATE_ON
+
+
+async def test_device_removed_becomes_unavailable(hass, init_integration, mock_api):
+    """A device that disappears from the backend goes unavailable; siblings keep reporting."""
+    coordinator = init_integration.runtime_data.coordinator
+    mock_api.get_devices.return_value = [DEVICE_MOTION]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert _state(hass, "HUB1_D1_opening").state == STATE_UNAVAILABLE
+    assert _state(hass, "HUB1_D1_problem").state == STATE_UNAVAILABLE
+    assert _state(hass, "HUB1_D2_motion").state == STATE_OFF

@@ -19,6 +19,7 @@ REQUEST_TIMEOUT: Final = 15
 STREAM_READ_TIMEOUT: Final = 90  # backend pings every 15 s
 SSE_BACKOFF_MIN: Final = 5
 SSE_BACKOFF_MAX: Final = 300
+SSE_STABLE_SECONDS: Final = 30  # a stream that lasted this long resets the reconnect backoff
 
 EVENT_NAME: Final = "ajaxsecurflow_event"
 
