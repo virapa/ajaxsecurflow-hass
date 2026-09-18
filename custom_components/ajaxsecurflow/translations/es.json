@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Conectar con AjaxSecurFlow",
+        "description": "Crea un token de integración en el panel de AjaxSecurFlow (Perfil → Integraciones) y pégalo aquí.",
+        "data": {
+          "base_url": "URL base de la API",
+          "token": "Token de integración"
+        }
+      },
+      "reauth_confirm": {
+        "title": "El token ya no es válido",
+        "description": "Pega un token de integración nuevo desde el panel de AjaxSecurFlow.",
+        "data": {
+          "token": "Token de integración"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "No se pudo conectar con la API de AjaxSecurFlow.",
+      "invalid_auth": "El token ha sido rechazado. Revísalo o crea uno nuevo.",
+      "plan_free": "El plan Free no incluye acceso a dispositivos. Necesitas Basic o superior."
+    },
+    "abort": {
+      "already_configured": "Esta cuenta ya está configurada.",
+      "reauth_successful": "Token actualizado."
+    },
+    "create_entry": {
+      "default": "Conectado.",
+      "no_control": "Conectado. Tu plan Basic solo permite monitorizar; armar/desarmar requiere Pro o superior."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de AjaxSecurFlow",
+        "data": {
+          "scan_interval": "Intervalo de sondeo (segundos)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "alarm_control_panel": {
+      "group": { "name": "{group}" }
+    },
+    "binary_sensor": {
+      "opening": { "name": "Apertura" },
+      "extra_contact": { "name": "Contacto externo" },
+      "motion": { "name": "Movimiento" },
+      "glass_break": { "name": "Rotura de cristal" },
+      "moisture": { "name": "Fuga" },
+      "smoke": { "name": "Humo" },
+      "connectivity": { "name": "En línea" },
+      "tamper": { "name": "Sabotaje" },
+      "problem": { "name": "Problema" },
+      "power": { "name": "Alimentación externa" }
+    },
+    "sensor": {
+      "battery": { "name": "Batería" },
+      "signal_level": {
+        "name": "Señal",
+        "state": { "no_signal": "Sin señal", "weak": "Débil", "normal": "Normal", "strong": "Fuerte" }
+      },
+      "temperature": { "name": "Temperatura" },
+      "humidity": { "name": "Humedad" },
+      "co2": { "name": "CO2" },
+      "gsm_signal": {
+        "name": "Señal GSM",
+        "state": { "no_signal": "Sin señal", "weak": "Débil", "normal": "Normal", "strong": "Fuerte" }
+      },
+      "firmware_version": { "name": "Firmware" },
+      "last_event": { "name": "Último evento" }
+    }
+  },
+  "exceptions": {
+    "plan_required": { "message": "Los comandos de armado requieren un plan Pro o Premium de AjaxSecurFlow." },
+    "command_failed": { "message": "AjaxSecurFlow rechazó el comando: {error}" }
+  }
+}

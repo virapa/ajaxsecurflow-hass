@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to AjaxSecurFlow",
+        "description": "Create an integration token in the AjaxSecurFlow dashboard (Profile → Integraciones) and paste it here.",
+        "data": {
+          "base_url": "API base URL",
+          "token": "Integration token"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Token no longer valid",
+        "description": "Paste a new integration token from the AjaxSecurFlow dashboard.",
+        "data": {
+          "token": "Integration token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the AjaxSecurFlow API.",
+      "invalid_auth": "The token was rejected. Check it or create a new one.",
+      "plan_free": "The Free plan does not include device access. Upgrade to Basic or higher."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Token updated."
+    },
+    "create_entry": {
+      "default": "Connected.",
+      "no_control": "Connected. Your Basic plan allows monitoring only; arm/disarm needs Pro or higher."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "AjaxSecurFlow options",
+        "data": {
+          "scan_interval": "Polling interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "alarm_control_panel": {
+      "group": { "name": "{group}" }
+    },
+    "binary_sensor": {
+      "opening": { "name": "Opening" },
+      "extra_contact": { "name": "External contact" },
+      "motion": { "name": "Motion" },
+      "glass_break": { "name": "Glass break" },
+      "moisture": { "name": "Leak" },
+      "smoke": { "name": "Smoke" },
+      "connectivity": { "name": "Online" },
+      "tamper": { "name": "Tamper" },
+      "problem": { "name": "Problem" },
+      "power": { "name": "External power" }
+    },
+    "sensor": {
+      "battery": { "name": "Battery" },
+      "signal_level": {
+        "name": "Signal",
+        "state": { "no_signal": "No signal", "weak": "Weak", "normal": "Normal", "strong": "Strong" }
+      },
+      "temperature": { "name": "Temperature" },
+      "humidity": { "name": "Humidity" },
+      "co2": { "name": "CO2" },
+      "gsm_signal": {
+        "name": "GSM signal",
+        "state": { "no_signal": "No signal", "weak": "Weak", "normal": "Normal", "strong": "Strong" }
+      },
+      "firmware_version": { "name": "Firmware" },
+      "last_event": { "name": "Last event" }
+    }
+  },
+  "exceptions": {
+    "plan_required": { "message": "Arming commands require a Pro or Premium AjaxSecurFlow plan." },
+    "command_failed": { "message": "AjaxSecurFlow rejected the command: {error}" }
+  }
+}
