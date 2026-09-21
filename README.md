@@ -1,5 +1,10 @@
 # AjaxSecurFlow for Home Assistant
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![Validate](https://github.com/virapa/ajaxsecurflow-hass/actions/workflows/validate.yml/badge.svg)](https://github.com/virapa/ajaxsecurflow-hass/actions/workflows/validate.yml)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-lightgrey.svg)](LICENSE)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://paypal.me/virapa)
+
 Brings your Ajax Systems hubs and devices into Home Assistant through the [AjaxSecurFlow](https://www.ajaxsecurflow.com) API. Home Assistant never talks to Ajax directly and needs no Ajax API key.
 
 ## Requirements
