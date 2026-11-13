@@ -9,7 +9,7 @@ Brings your Ajax Systems hubs and devices into Home Assistant through the [AjaxS
 
 ## Requirements
 
-- Home Assistant 2025.1 or newer.
+- Home Assistant 2025.8 or newer.
 - An [AjaxSecurFlow](https://www.ajaxsecurflow.com) account on the **Basic** plan or higher. **Pro** or **Premium** is required to arm/disarm.
 
 ## Installation (HACS)

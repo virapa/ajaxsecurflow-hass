@@ -5,7 +5,7 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlowWithReload
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -96,8 +96,8 @@ class AjaxSecurFlowConfigFlow(ConfigFlow, domain=DOMAIN):
         return AjaxSecurFlowOptionsFlow()
 
 
-class AjaxSecurFlowOptionsFlow(OptionsFlow):
-    """Polling interval."""
+class AjaxSecurFlowOptionsFlow(OptionsFlowWithReload):
+    """Polling interval. Saving reloads the entry so the new interval takes effect."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:

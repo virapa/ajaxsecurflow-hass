@@ -1,6 +1,6 @@
 # Test image: Home Assistant test harness on Linux (Windows lacks wheels for some HA deps).
-# gcc is needed because lru-dict (an HA dependency) ships no cp313 wheel and is built from source.
-FROM python:3.13-slim
+# gcc is needed because lru-dict (an HA dependency) ships no cp314 wheel and is built from source.
+FROM python:3.14-slim
 WORKDIR /app
 COPY requirements_test.txt .
 RUN apt-get update \

@@ -77,7 +77,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry
         entities.extend(AjaxHubBinarySensor(rt.coordinator, hub_id, desc) for desc in HUB_DESCRIPTIONS if desc.exists_fn(hub_data.hub))
         for device_id, device in hub_data.devices.items():
             entities.extend(
-                AjaxDeviceBinarySensor(rt.coordinator, hub_id, device_id, rt.rooms, desc)
+                AjaxDeviceBinarySensor(rt.coordinator, hub_id, device_id, rt.rooms, rt.hub_device_ids, desc)
                 for desc in DEVICE_DESCRIPTIONS if desc.exists_fn(device)
             )
     async_add_entities(entities)
@@ -86,8 +86,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry
 class AjaxDeviceBinarySensor(AjaxSecurFlowDeviceEntity, BinarySensorEntity):
     entity_description: AjaxBinarySensorDescription
 
-    def __init__(self, coordinator: AjaxSecurFlowCoordinator, hub_id: str, device_id: str, rooms: dict[str, str], description: AjaxBinarySensorDescription) -> None:
-        super().__init__(coordinator, hub_id, device_id, rooms)
+    def __init__(self, coordinator: AjaxSecurFlowCoordinator, hub_id: str, device_id: str, rooms: dict[str, str], hub_device_ids: dict[str, str], description: AjaxBinarySensorDescription) -> None:
+        super().__init__(coordinator, hub_id, device_id, rooms, hub_device_ids)
         self.entity_description = description
         self._attr_unique_id = f"{hub_id}_{device_id}_{description.key}"
 

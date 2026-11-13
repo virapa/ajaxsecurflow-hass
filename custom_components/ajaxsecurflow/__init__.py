@@ -3,17 +3,18 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError, ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import AjaxSecurFlowClient, AjaxSecurFlowError, AuthError
-from .const import CONF_BASE_URL, CONF_SCAN_INTERVAL, CONF_TOKEN, DEFAULT_SCAN_INTERVAL, PLANS_WITH_DEVICES
+from .const import CONF_BASE_URL, CONF_TOKEN, PLANS_WITH_DEVICES
 from .coordinator import AjaxSecurFlowCoordinator
+from .entity import hub_device_fields
 from .models import HubData
 from .sse import SSEListener
 
@@ -29,6 +30,7 @@ class AjaxSecurFlowRuntimeData:
     listener: SSEListener
     plan: str
     rooms: dict[str, str]  # "<hub_id>:<room_id>" -> room name
+    hub_device_ids: dict[str, str]  # hub_id -> device registry id
 
 
 type AjaxSecurFlowConfigEntry = ConfigEntry[AjaxSecurFlowRuntimeData]
@@ -61,19 +63,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry
     await coordinator.async_config_entry_first_refresh()
     rooms = await _load_room_names(client, coordinator.data)
 
+    # Hubs are registered first so Ajax devices can point at them through via_device_id.
+    registry = dr.async_get(hass)
+    hub_device_ids = {
+        hub_id: registry.async_get_or_create(
+            config_entry_id=entry.entry_id, **hub_device_fields(hub_id, hub_data.hub)
+        ).id
+        for hub_id, hub_data in coordinator.data.items()
+    }
+
     listener = SSEListener(hass, coordinator, client)
-    entry.runtime_data = AjaxSecurFlowRuntimeData(client, coordinator, listener, plan, rooms)
+    entry.runtime_data = AjaxSecurFlowRuntimeData(client, coordinator, listener, plan, rooms, hub_device_ids)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     listener.start()
-    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
-
-
-async def _async_options_updated(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry) -> None:
-    interval = timedelta(seconds=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
-    if interval != entry.runtime_data.coordinator.update_interval:
-        await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AjaxSecurFlowConfigEntry) -> bool:

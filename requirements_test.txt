@@ -1,3 +1,2 @@
 # On Windows use scripts/test.sh (Docker); some HA deps have no Windows wheels.
 pytest-homeassistant-custom-component>=0.13.200
-aioresponses>=0.7.6
