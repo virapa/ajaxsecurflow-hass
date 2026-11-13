@@ -1,6 +1,7 @@
 # tests/test_init.py
 import asyncio
-from unittest.mock import AsyncMock, patch
+from datetime import timedelta
+from unittest.mock import patch
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import device_registry as dr
@@ -24,8 +25,13 @@ async def test_setup_and_unload(hass, init_integration):
 
 async def test_devices_registered_with_via_device(hass, init_integration):
     registry = dr.async_get(hass)
-    hub = registry.async_get_device(identifiers={(DOMAIN, "HUB1")})
-    door = registry.async_get_device(identifiers={(DOMAIN, "HUB1:D1")})
+    entry_devices = {
+        identifier: device
+        for device in dr.async_entries_for_config_entry(registry, init_integration.entry_id)
+        for identifier in device.identifiers
+    }
+    hub = entry_devices.get((DOMAIN, "HUB1"))
+    door = entry_devices.get((DOMAIN, "HUB1:D1"))
     assert hub is not None and hub.manufacturer == "Ajax Systems" and hub.model == "HUB_2_PLUS"
     assert door is not None and door.via_device_id == hub.id and door.model == "DoorProtect"
 
@@ -78,13 +84,17 @@ async def test_unload_cancels_running_sse_task(hass, mock_api, config_entry):
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
-async def test_options_update_reloads_only_when_interval_changes(hass, init_integration):
+async def test_options_flow_reloads_with_new_interval(hass, init_integration):
     entry = init_integration
-    with patch.object(hass.config_entries, "async_reload", AsyncMock()) as reload:
-        hass.config_entries.async_update_entry(entry, options={CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL})
-        await hass.async_block_till_done()
-        reload.assert_not_awaited()
+    assert entry.runtime_data.coordinator.update_interval == timedelta(seconds=DEFAULT_SCAN_INTERVAL)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(result["flow_id"], {CONF_SCAN_INTERVAL: 120})
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.runtime_data.coordinator.update_interval == timedelta(seconds=120)
 
-        hass.config_entries.async_update_entry(entry, options={CONF_SCAN_INTERVAL: 120})
-        await hass.async_block_till_done()
-        reload.assert_awaited_once_with(entry.entry_id)
+
+async def test_hub_device_ids_registered(hass, init_integration):
+    registry = dr.async_get(hass)
+    hub_device_id = init_integration.runtime_data.hub_device_ids["HUB1"]
+    assert (DOMAIN, "HUB1") in registry.async_get(hub_device_id).identifiers

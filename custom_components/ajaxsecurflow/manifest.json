@@ -1,6 +1,7 @@
 {
   "domain": "ajaxsecurflow",
   "name": "AjaxSecurFlow",
+  "categories": ["security_safety.alarm_systems"],
   "codeowners": ["@virapa"],
   "config_flow": true,
   "documentation": "https://github.com/virapa/ajaxsecurflow-hass",
